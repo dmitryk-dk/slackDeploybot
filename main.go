@@ -25,7 +25,7 @@ const (
 	EnvironmentText  = "environment id: %d; \t environment name: %s; \t used branch: %s; commit hash: %s;"
 	UsersText        = "user id: %d; \t user name: %s %s; \t email: %s"
 	TriggerText      = "Start deployment, success!"
-	DeploymentText = `
+	DeploymentText   = `
 		deployment id: %d; \n;
 		repository id: %d; \n
 		environment_id: %d; \n
@@ -36,10 +36,10 @@ const (
 		status: %s; \n
 		retries: %s; `
 	RepositoriesText = "repository id: %d; \n name: %s; \n title: %s; \n type: %s; \n repository url: %s; \n"
-	RepositoryText    = "repository id: %d; \n name: %s; \n title: %s; \n type: %s; \n repository url: %s; \n"
-	HelloText                = "Hi, dude! I'm help deploying)!"
+	RepositoryText   = "repository id: %d; \n name: %s; \n title: %s; \n type: %s; \n repository url: %s; \n"
+	HelloText        = "Hi, dude! I'm help deploying)!"
 	//@TODO need update help text for show how to use deploybot
-	HelpText                  = `For creating request use next syntax:
+	HelpText = `For creating request use next syntax:
 	@botan servers; limit: 20;, where servers - it is the URL query string,
 	and after you can put params which deploybot used;
 	`
@@ -162,15 +162,15 @@ func MessageGenerator(action string, params map[string]string) []string {
 			}
 			message = append(message, fmt.Sprintf(
 				DeploymentText,
-					dep.Id,
-					dep.RepositoryId,
-					dep.EnvironmentId,
-					dep.AuthorName,
-					dep.DeployFromScratch,
-					dep.TriggerNotification,
-					dep.DeployedVersion,
-					dep.State,
-					dep.Retries))
+				dep.Id,
+				dep.RepositoryId,
+				dep.EnvironmentId,
+				dep.AuthorName,
+				dep.DeployFromScratch,
+				dep.TriggerNotification,
+				dep.DeployedVersion,
+				dep.State,
+				dep.Retries))
 		case "repositories":
 			if err := json.Unmarshal(data, &user); err != nil {
 				log.Println("Unmarshal error:", err)
@@ -190,16 +190,18 @@ func MessageGenerator(action string, params map[string]string) []string {
 			message = append(message, "Hey man, i don't know this command!")
 		}
 	} else {
-		fmt.Println("Here ->>", string(data))
+
 		if err := json.Unmarshal(data, &compared); err != nil {
 			log.Println("Unmarshal error:", err)
 		}
+
 		for _, v := range compared.Entries {
 			switch val := v.(type) {
 			case map[string]interface{}:
 				message = append(message, MakeMessage(action, val))
 			}
 		}
+
 	}
 
 	return message
