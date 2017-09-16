@@ -112,6 +112,7 @@ func DeploybotData(action string, params map[string]string) ([]byte, error) {
 	act := fmt.Sprintf("/%s", action)
 
 	if action == "trigger" {
+		act := fmt.Sprintf("/%s", "deployments")
 		envId, err := strconv.Atoi(params["environment_id"])
 		userId, err := strconv.Atoi(params["user_id"])
 		dplFromScratch, err := strconv.ParseBool(params["deploy_from_scratch"])
