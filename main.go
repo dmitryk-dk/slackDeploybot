@@ -20,11 +20,26 @@ import (
 
 const (
 	ServersText      = "server name: %s; \t server id: %d;"
+	ServerText       = "server name: %s; \n server id: %d; \n protocol: %s; \n repository id: %d; \n"
 	EnvironmentsText = "environment id: %d; \t environment name: %s; \t used branch: %s"
+	EnvironmentText  = "environment id: %d; \t environment name: %s; \t used branch: %s; commit hash: %s;"
 	UsersText        = "user id: %d; \t user name: %s %s; \t email: %s"
-	DeploymentsText  = "Start deployment, success!"
-	HelloText        = "Hi, dude! I'm help deploying)!"
-	HelpText         = `For creating request use next syntax:
+	TriggerText      = "Start deployment, success!"
+	DeploymentText = `
+		deployment id: %d; \n;
+		repository id: %d; \n
+		environment_id: %d; \n
+		author name: %s; \n
+		deploy from scratch: %b; \n
+		trigger notifications: %b; \n
+		deployed commit: %s; \n
+		status: %s; \n
+		retries: %s; `
+	RepositoriesText = "repository id: %d; \n name: %s; \n title: %s; \n type: %s; \n repository url: %s; \n"
+	RepositoryText    = "repository id: %d; \n name: %s; \n title: %s; \n type: %s; \n repository url: %s; \n"
+	HelloText                = "Hi, dude! I'm help deploying)!"
+	//@TODO need update help text for show how to use deploybot
+	HelpText                  = `For creating request use next syntax:
 	@botan servers; limit: 20;, where servers - it is the URL query string,
 	and after you can put params which deploybot used;
 	`
@@ -96,7 +111,7 @@ func DeploybotData(action string, params map[string]string) ([]byte, error) {
 	client := deploybotClient.Client{}
 	act := fmt.Sprintf("/%s", action)
 
-	if action == "deployments" {
+	if action == "trigger" {
 		envId, err := strconv.Atoi(params["environment_id"])
 		userId, err := strconv.Atoi(params["user_id"])
 		dplFromScratch, err := strconv.ParseBool(params["deploy_from_scratch"])
@@ -117,27 +132,80 @@ func DeploybotData(action string, params map[string]string) ([]byte, error) {
 	return client.GetData(act, deploybotEndpoint, deploybotToken, params)
 }
 
-func MessageGenerator(text string, str *structs.ComparedObject, params map[string]string) []string {
+func MessageGenerator(action string, params map[string]string) []string {
 	var message = make([]string, 0, 100)
-	data, err := DeploybotData(text, params)
+	var user structs.User
+	var server structs.Server
+	var env structs.Environment
+	var rep structs.Repository
+	var dep structs.Deployment
+	var compared structs.ComparedObject
+
+	data, err := DeploybotData(action, params)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := json.Unmarshal(data, &str); err != nil {
-		log.Println("Unmarshal error:", err)
-	}
+	isOneItemRequest := strings.Contains(action, "/")
 
-	for _, v := range str.Entries {
-		switch val := v.(type) {
-		case map[string]interface{}:
-			message = append(message, MakeMessages(text, val))
+	if isOneItemRequest {
+		command := strings.Split(strings.TrimSpace(action), "/")
+		switch command[0] {
+		case "users":
+			if err := json.Unmarshal(data, &user); err != nil {
+				log.Println("Unmarshal error:", err)
+			}
+			message = append(message, fmt.Sprintf(UsersText, user.Id, user.FirstName, user.LastName, user.Email))
+		case "deployments":
+			if err := json.Unmarshal(data, &user); err != nil {
+				log.Println("Unmarshal error:", err)
+			}
+			message = append(message, fmt.Sprintf(
+				DeploymentText,
+					dep.Id,
+					dep.RepositoryId,
+					dep.EnvironmentId,
+					dep.AuthorName,
+					dep.DeployFromScratch,
+					dep.TriggerNotification,
+					dep.DeployedVersion,
+					dep.State,
+					dep.Retries))
+		case "repositories":
+			if err := json.Unmarshal(data, &user); err != nil {
+				log.Println("Unmarshal error:", err)
+			}
+			message = append(message, fmt.Sprintf(RepositoryText, rep.Id, rep.Name, rep.Title, rep.Type, rep.Url))
+		case "environments":
+			if err := json.Unmarshal(data, &user); err != nil {
+				log.Println("Unmarshal error:", err)
+			}
+			message = append(message, fmt.Sprintf(EnvironmentText, env.Id, env.Name, env.BranchName, env.CurrentVersion))
+		case "servers":
+			if err := json.Unmarshal(data, &user); err != nil {
+				log.Println("Unmarshal error:", err)
+			}
+			message = append(message, fmt.Sprintf(ServerText, server.Name, server.Id, server.Protocol, server.RepositoryId))
+		default:
+			message = append(message, "Hey man, i don't know this command!")
+		}
+	} else {
+		fmt.Println("Here ->>", string(data))
+		if err := json.Unmarshal(data, &compared); err != nil {
+			log.Println("Unmarshal error:", err)
+		}
+		for _, v := range compared.Entries {
+			switch val := v.(type) {
+			case map[string]interface{}:
+				message = append(message, MakeMessage(action, val))
+			}
 		}
 	}
+
 	return message
 }
 
-func MakeMessages(action string, val map[string]interface{}) string {
+func MakeMessage(action string, val map[string]interface{}) string {
 	fmt.Println(action)
 	switch action {
 	case "servers":
@@ -146,8 +214,10 @@ func MakeMessages(action string, val map[string]interface{}) string {
 		return fmt.Sprintf(EnvironmentsText, int(val["id"].(float64)), val["name"], val["branch_name"])
 	case "users":
 		return fmt.Sprintf(UsersText, int(val["id"].(float64)), val["first_name"], val["last_name"], val["email"])
+	case "repositories":
+		return fmt.Sprintf(RepositoriesText, int(val["id"].(float64)), val["name"], val["title"], val["type"], val["url"])
 	case "deployments":
-		return DeploymentsText
+		return TriggerText
 	default:
 		return ""
 	}
@@ -169,8 +239,6 @@ func GenerateParams(action []string) map[string]string {
 
 func MessageHandler(channel string, msg *api.Message, client *slackClient.Client) {
 	var str string
-	var respData structs.ComparedObject
-
 	botId := "<@" + botId + ">"
 	isBotUsed := strings.HasPrefix(msg.Text, botId)
 	text := strings.TrimSpace(strings.Replace(msg.Text, botId, "", -1))
@@ -190,7 +258,7 @@ func MessageHandler(channel string, msg *api.Message, client *slackClient.Client
 			}
 
 		default:
-			msg := MessageGenerator(strings.ToLower(action[0]), &respData, params)
+			msg := MessageGenerator(strings.ToLower(action[0]), params)
 			for _, m := range msg {
 				str += m + "\n"
 			}
