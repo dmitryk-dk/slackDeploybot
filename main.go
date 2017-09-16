@@ -209,7 +209,6 @@ func MessageGenerator(action string, params map[string]string) []string {
 }
 
 func MakeMessage(action string, val map[string]interface{}) string {
-	fmt.Println(action)
 	switch action {
 	case "servers":
 		return fmt.Sprintf(ServersText, val["name"], int(val["id"].(float64)))
@@ -219,7 +218,7 @@ func MakeMessage(action string, val map[string]interface{}) string {
 		return fmt.Sprintf(UsersText, int(val["id"].(float64)), val["first_name"], val["last_name"], val["email"])
 	case "repositories":
 		return fmt.Sprintf(RepositoriesText, int(val["id"].(float64)), val["name"], val["title"], val["type"], val["url"])
-	case "deployments":
+	case "trigger":
 		return TriggerText
 	default:
 		return ""
